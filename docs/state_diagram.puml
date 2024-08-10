@@ -1,0 +1,12 @@
+@startuml
+
+[*] --> NotConnected
+
+NotConnected --> Connected : Connect
+Connected --> NotConnected : Connection lost | Disconnect
+
+Connected --> Armed : Arm
+Armed --> Connected : Disarm
+Armed --> NotConnected : Connection lost | Disconnect
+
+@enduml

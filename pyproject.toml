@@ -1,0 +1,22 @@
+[project]
+name = "msur-gs"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Evgeny Shkurin", email = "299792458.photon.94@gmail.com"},
+]
+dependencies = [
+    "pyside6>=6.7.2",
+    "pymavlink>=2.4.41",
+    "loguru>=0.7.2",
+    "mavsdk>=2.8.1",
+    "hidapi>=0.14.0.post2",
+    "easyhid @ git+https://github.com/bglopez/python-easyhid.git",
+]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
