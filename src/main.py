@@ -2,6 +2,7 @@ import dataclasses
 import enum
 import sys
 from functools import partial
+import platform
 
 from mavsdk import System, info
 import asyncio
@@ -11,11 +12,16 @@ from PySide6.QtGui import QKeyEvent
 
 DEFAULT_PORT = 14550
 
-MAVLINK_CONNECTIONS = {
-    "UDP": f"udp://:{DEFAULT_PORT}",
-    "TCP": f"tcp://:{DEFAULT_PORT}",
-    "SERIAL": "serial:///dev/tty.usbmodem1101"
-}
+if platform.system() == "Darwin":
+    MAVLINK_CONNECTIONS = {
+        "UDP": f"udp://:{DEFAULT_PORT}",
+        "TCP": f"tcp://:{DEFAULT_PORT}",
+        "SERIAL": "serial:///dev/tty.usbmodem1101"
+    }
+elif platform.system() == "Windows":
+    MAVLINK_CONNECTIONS = {
+        "LOCAL SERVER": "LOCAL_SERVER"
+    }
 
 
 class SignalsType(enum.Enum):
@@ -57,7 +63,11 @@ class MavlinkWorker(QtCore.QRunnable):
     def __init__(self, connection_address):
         super().__init__()
         self.connection_address = connection_address
-        self._drone = System()
+        if connection_address == "LOCAL_SERVER":
+            logger.debug(f'Create localhost system')
+            self._drone = System(mavsdk_server_address='localhost', port=50051)
+        else:
+            self._drone = System()
         self.signal = SharedSignal()
         self.exception = SharedException()
         self.to_worker_signal = ToWorkerSignals()
@@ -120,8 +130,11 @@ class MavlinkWorker(QtCore.QRunnable):
                 signal_type=SignalsType.WORKER_STATE_STR,
                 signal_value="🔄 Подключение к ROV")])
 
-        logger.info("Connecting to drone by address: {}", self.connection_address)
-        await self._drone.connect(system_address=self.connection_address)
+        if self.connection_address == "LOCAL_SERVER":
+            await self._drone.connect()
+        else:
+            logger.info("Connecting to drone by address: {}", self.connection_address)
+            await self._drone.connect(system_address=self.connection_address)
 
         logger.info("🔄 Waiting for drone to connect...")
         self.signal.values.emit([
@@ -297,8 +310,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             connection_address_name = self.connection_selector.currentText()
             connection_address = MAVLINK_CONNECTIONS[connection_address_name]
-            self.mavlink_worker = MavlinkWorker(None)
-            self.mavlink_worker.connection_address = connection_address
+            self.mavlink_worker = MavlinkWorker(connection_address)
 
             self.mavlink_worker.signal.values.connect(self._update_shared_value)
             self.mavlink_worker.exception.value.connect(self._shared_exception)
